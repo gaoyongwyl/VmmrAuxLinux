@@ -32,6 +32,20 @@ Net<Dtype>::Net(const string& param_file, Phase phase) {
 }
 
 template <typename Dtype>
+Net<Dtype>::Net(const string& param_file) {
+  NetParameter param;
+  ReadNetParamsFromTextFileOrDie(param_file, &param);
+  Init(param);
+}
+
+template <typename Dtype>
+Net<Dtype>::Net(const string& param_string, int dummy ) {
+   NetParameter param;
+   ReadProtoFromString(param_string, &param);
+   Init(param);
+}
+
+template <typename Dtype>
 void Net<Dtype>::Init(const NetParameter& in_param) {
   // Set phase from the state.
   phase_ = in_param.state().phase();

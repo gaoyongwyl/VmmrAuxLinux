@@ -44,6 +44,9 @@ inline void MakeTempDir(string* temp_dirname) {
   delete[] temp_dirname_cstr;
 }
 
+//added by ygao for vmmr proj @hz
+bool ReadProtoFromString(const string& strProto, Message* proto);
+
 bool ReadProtoFromTextFile(const char* filename, Message* proto);
 
 inline bool ReadProtoFromTextFile(const string& filename, Message* proto) {
@@ -90,6 +93,13 @@ bool ReadFileToDatum(const string& filename, const int label, Datum* datum);
 inline bool ReadFileToDatum(const string& filename, Datum* datum) {
   return ReadFileToDatum(filename, -1, datum);
 }
+
+	bool ConvertImageMatToDatum( cv::Mat& currImageMat, 
+		const int label,
+		const int height, 
+		const int width, 
+				     Datum* datum);
+
 
 bool ReadImageToDatum(const string& filename, const int label,
     const int height, const int width, const bool is_color,

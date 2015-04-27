@@ -1,0 +1,6 @@
+=>convert_imagesetex.bin:
+set args V1 0:1 -1:6 380 0:0 2 1
+set args V1 0:2 -1:6 150 0:0 2 1
+
+
+set args /home/ygao/Projects/VehicleRecogntition/DNN_Experiments/V1_AAuMColor/Makemodel_C_vface_150/Exp_20150424_20H09M_34s/vmakemodel_C_vface_150_train_test_val.prototxt /home/ygao/Projects/VehicleRecogntition/DNN_Experiments/V1_AAuMColor/Makemodel_C_vface_150/Exp_20150424_20H09M_34s/vmakemodel_C_vface_150_iter_120000.caffemodel /home/ygao/Projects/VehicleRecogntition/Data/V1_AAuMColor/Cropped_C_vface_150/ /home/ygao/Projects/VehicleRecogntition/Data/V1_AAuMColor/_LabelList/Makemodel/TT0/Makemodel_TestLabelList.txt ip1 CHISQR prob Makemodel /home/ygao/Projects/VehicleRecogntition/DNN_Experiments/V1_AAuMColor/Makemodel_C_vface_150/Exp_20150424_20H09M_34s/ 0 1 0

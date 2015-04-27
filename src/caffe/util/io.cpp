@@ -39,6 +39,28 @@ bool ReadProtoFromTextFile(const char* filename, Message* proto) {
   return success;
 }
 
+// Added by ygao for vmmr @ hz, 2015-2-19
+  bool ReadProtoFromString(const string& strProto, Message* proto) {
+  //int fd = open(filename, O_RDONLY);
+  ///CHECK_NE(fd, -1) << "File not found: " << filename;
+
+  //class LIBPROTOBUF_EXPORT IstreamInputStream : public ZeroCopyInputStream 
+  //IstreamInputStream(istream* stream, int block_size = -1);
+
+  // // Parses a text-format protocol message from the given input stream to
+  // the given message object.  This function parses the format written
+  // by Print().
+  //static bool Parse(io::ZeroCopyInputStream* input, Message* output);
+  // Like Parse(), but reads directly from a string.
+  //static bool ParseFromString(const string& input, Message* output);
+
+  //FileInputStream* input = new FileInputStream(fd);
+  bool success = google::protobuf::TextFormat::ParseFromString( strProto, proto);
+  //delete input;
+  //close(fd);
+  return success;
+}
+
 void WriteProtoToTextFile(const Message& proto, const char* filename) {
   int fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0644);
   FileOutputStream* output = new FileOutputStream(fd);
@@ -135,6 +157,45 @@ bool ReadImageToDatum(const string& filename, const int label,
     return false;
   }
 }
+
+// convert cv::Mat to Datum format
+	bool ConvertImageMatToDatum( cv::Mat& currImageMat, 
+		const int label,
+		const int height, 
+		const int width, 
+		Datum* datum) 
+	{
+		CHECK( currImageMat.channels() == 3 );  //should be three channels
+
+			cv::Mat cv_img;
+			if (height > 0 && width > 0) {
+				//cv::resize( currImageMat, cv_img, cv::Size(height, width)); //prev
+				cv::resize( currImageMat, cv_img, cv::Size(width, height ));  //changed by ygao. 20150206
+			} else {
+				cv_img = currImageMat;
+			}
+			if (!cv_img.data) {
+				LOG(ERROR) << "Invalid image mat data !";
+				return false;
+			}
+			datum->set_channels(3);
+			datum->set_height(cv_img.rows);
+			datum->set_width(cv_img.cols);
+			datum->set_label(label);
+			datum->clear_data();
+			datum->clear_float_data();
+			string* datum_string = datum->mutable_data();
+			for (int c = 0; c < 3; ++c) {
+				for (int h = 0; h < cv_img.rows; ++h) {
+					for (int w = 0; w < cv_img.cols; ++w) {
+						datum_string->push_back(
+							static_cast<char>(cv_img.at<cv::Vec3b>(h, w)[c]));
+					}
+				}
+			}
+			return true;
+	}
+
 
 bool ReadFileToDatum(const string& filename, const int label,
     Datum* datum) {

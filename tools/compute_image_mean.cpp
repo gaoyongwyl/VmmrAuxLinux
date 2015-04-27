@@ -22,6 +22,7 @@ DEFINE_string(backend, "lmdb",
         "The backend {leveldb, lmdb} containing the images");
 
 int main(int argc, char** argv) {
+
   ::google::InitGoogleLogging(argv[0]);
 
 #ifndef GFLAGS_GFLAGS_H_
@@ -39,6 +40,7 @@ int main(int argc, char** argv) {
     gflags::ShowUsageWithFlagsRestrict(argv[0], "tools/compute_image_mean");
     return 1;
   }
+
 
   scoped_ptr<db::DB> db(db::GetDB(FLAGS_backend));
   db->Open(argv[1], db::READ);

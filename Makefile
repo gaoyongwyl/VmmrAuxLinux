@@ -25,6 +25,9 @@ LIB_BUILD_DIR := $(BUILD_DIR)/lib
 STATIC_NAME := $(LIB_BUILD_DIR)/lib$(PROJECT).a
 DYNAMIC_NAME := $(LIB_BUILD_DIR)/lib$(PROJECT).so
 
+VMMR_STATIC_NAME := $(LIB_BUILD_DIR)/libExtractDNNFeature.a
+VMMR_DYNAMIC_NAME := $(LIB_BUILD_DIR)/libExtractDNNFeature.so
+
 ##############################
 # Get all source files
 ##############################
@@ -147,6 +150,9 @@ NONEMPTY_WARN_REPORT := $(BUILD_DIR)/$(WARNS_EXT)
 # Derive include and lib directories
 ##############################
 CUDA_INCLUDE_DIR := $(CUDA_DIR)/include
+CUDNN_PATH := /home/ygao/Projects/cudnn-6.5-linux-x64-v2
+ATLAS_INCLUDE := /usr/include/atlas
+ATLAS_LIB := /usr/lib64/atlas
 
 CUDA_LIB_DIR :=
 # add <cuda>/lib64 only if it exists
@@ -154,8 +160,13 @@ ifneq ("$(wildcard $(CUDA_DIR)/lib64)","")
 	CUDA_LIB_DIR += $(CUDA_DIR)/lib64
 endif
 CUDA_LIB_DIR += $(CUDA_DIR)/lib
+CUDA_LIB_DIR += $(CUDNN_PATH)
+CUDA_LIB_DIR += $(ATLAS_LIB)
 
 INCLUDE_DIRS += $(BUILD_INCLUDE_DIR) ./src ./include
+INCLUDE_DIRS += $(CUDNN_PATH)
+INCLUDE_DIRS += $(ATLAS_INCLUDE)
+
 ifneq ($(CPU_ONLY), 1)
 	INCLUDE_DIRS += $(CUDA_INCLUDE_DIR)
 	LIBRARY_DIRS += $(CUDA_LIB_DIR)
@@ -163,7 +174,7 @@ ifneq ($(CPU_ONLY), 1)
 endif
 LIBRARIES += glog gflags protobuf leveldb snappy \
 	lmdb boost_system hdf5_hl hdf5 m \
-	opencv_core opencv_highgui opencv_imgproc
+	opencv_core opencv_highgui opencv_imgproc opencv_imgcodecs
 PYTHON_LIBRARIES := boost_python python2.7
 WARNINGS := -Wall -Wno-sign-compare
 
@@ -381,7 +392,7 @@ endif
 	py mat py$(PROJECT) mat$(PROJECT) proto runtest \
 	superclean supercleanlist supercleanfiles warn everything
 
-all: $(STATIC_NAME) $(DYNAMIC_NAME) tools examples
+all: $(STATIC_NAME) $(DYNAMIC_NAME) tools examples $(VMMR_STATIC_NAME) $(VMMR_DYNAMIC_NAME)
 
 everything: $(EVERYTHING_TARGETS)
 
@@ -492,10 +503,25 @@ $(ALL_BUILD_DIRS): | $(BUILD_DIR_LINK)
 $(DYNAMIC_NAME): $(OBJS) | $(LIB_BUILD_DIR)
 	@ echo LD -o $@
 	$(Q)$(CXX) -shared -o $@ $(OBJS) $(LINKFLAGS) $(LDFLAGS) $(DYNAMIC_FLAGS)
+	echo $@
 
 $(STATIC_NAME): $(OBJS) | $(LIB_BUILD_DIR)
 	@ echo AR -o $@
 	$(Q)ar rcs $@ $(OBJS)
+	echo $@
+
+
+$(warning "WMMR ExtractDnnFeature")
+$(VMMR_DYNAMIC_NAME): $(OBJS) | $(LIB_BUILD_DIR)
+	@ echo LD -o $@
+	$(Q)$(CXX) -shared -o $@ $(OBJS) $(LINKFLAGS) $(LDFLAGS) $(DYNAMIC_FLAGS)
+	echo $@
+
+$(VMMR_STATIC_NAME): $(OBJS) | $(LIB_BUILD_DIR)
+	@ echo AR -o $@
+	$(Q)ar rcs $@ $(OBJS)
+	echo $@
+$(warning "VMMR ExtractDnnFeature build end!")
 
 $(BUILD_DIR)/%.o: %.cpp | $(ALL_BUILD_DIRS)
 	@ echo CXX $<

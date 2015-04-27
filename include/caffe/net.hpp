@@ -25,6 +25,8 @@ class Net {
  public:
   explicit Net(const NetParameter& param);
   explicit Net(const string& param_file, Phase phase);
+  explicit Net(const string& param_file);
+  explicit Net(const string& param_string, int dummy ); //added by ygao. for vmmr proj.
   virtual ~Net() {}
 
   /// @brief Initialize a network with a NetParameter.
