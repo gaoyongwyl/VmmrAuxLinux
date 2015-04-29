@@ -135,7 +135,7 @@ function GetPrepTypeCode {
 #####################################################
 ## crop and save to ldb
 ####################################################
-if [$DO_CONVERTLDBEX -gt 0 ]
+if [ $DO_CONVERTLDBEX -gt 0 ]
 then
   echo Now crop muliple-patches and save to ldb  ...
   echo How are : you
