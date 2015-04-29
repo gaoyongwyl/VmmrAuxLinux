@@ -456,8 +456,8 @@ int DNNFeatMulti::InitializeDNN(string strProtoModelFolder,
 		char szStdVFWidth[100];
 		sprintf( szStdVFWidth, "_%d", this->m_vecStdVFWidths[n]);
 		string strStdVFWdith = szStdVFWidth;
-		string strProtoFile = strProtoModelFolder + "vmakemodel_" + strPreprocCode + "_" +  strPatchName + strStdVFWdith + "_test_val.prototxt";
-		string strModelFile = strProtoModelFolder + "vmakemodel_" + strPreprocCode + "_" +  strPatchName + strStdVFWdith + "_iter_" +  strIterNum;
+		string strProtoFile = strProtoModelFolder + "vmakemodel_" + strPreprocCode + "_" +  strPatchName + strStdVFWdith + "_train_test_val.prototxt";
+		string strModelFile = strProtoModelFolder + "vmakemodel_" + strPreprocCode + "_" +  strPatchName + strStdVFWdith + "_iter_" +  strIterNum + ".caffemodel";
 		if( m_vecPatchIDs[n] == VmmrDNN::MAKE_LogoArea ) {
 			strProtoFile = strProtoModelFolder + "vmake_" + strPreprocCode + "_" + strPatchName + strStdVFWdith + "_test_val.prototxt";
 			strModelFile = strProtoModelFolder + "vmake_" +strPreprocCode + "_" +  strPatchName + strStdVFWdith + "_iter_" +  strIterNum;

@@ -87,8 +87,8 @@ int main(int argc, char* argv[])
 		strGPUDevID = argv[12];
 	}
 
-	if( ! IsPathEndWithSlash(strSampleFolder ) ) strSampleFolder += "\\";
-	if( ! IsPathEndWithSlash(strWorkFolder) ) strWorkFolder += "\\";
+	if( ! IsPathEndWithSlash(strSampleFolder ) ) strSampleFolder += "/";
+	if( ! IsPathEndWithSlash(strWorkFolder) ) strWorkFolder += "/";
 	//echo params:
 	cout << "Proto file: " << strProto << endl;
 	cout << "Model file: " << strModel << endl;
@@ -116,7 +116,7 @@ int main(int argc, char* argv[])
 	VmmrDNN* pDnnFeatureBoy = NULL;		
 	if(  compareNoCase( strModel, "MP" ) == true ){
 		if( !IsPathEndWithSlash( strProto ) ) {
-			strProto += "\\";  //For multi-patch should be a directory!
+			strProto += "/";  //For multi-patch should be a directory!
 		}
 		pDnnFeatureBoy = new DNNFeatMulti();
 		int nRetVal = ((DNNFeatMulti*)pDnnFeatureBoy)->InitializeDNN( strProto, enComputMode, iGPUDevID );
@@ -213,7 +213,7 @@ int FeatureReprentTest( VmmrDNN* pDnnFeatureBoy, VRClassType enVRClassType, stri
 		exit(-1);
 	}
 	
-	string strDnnFeatSaveFolder = strWorkFolder + "DnnFeat_" + strFeatName + "\\";
+	string strDnnFeatSaveFolder = strWorkFolder + "DnnFeat_" + strFeatName + "/";
 	string strIntraDistFile = strWorkFolder +  strFeatName + "_intra_dist.txt"; 
     string strExtraDistFile = strWorkFolder +  strFeatName + "_extra_dist.txt";
 	string strIntraExtraHistImageFile = strWorkFolder +  strFeatName + "_IntraExtraDistHist.jpg" ;

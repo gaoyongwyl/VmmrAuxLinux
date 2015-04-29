@@ -121,7 +121,10 @@ void VMMRImageDataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& botto
     // Apply transformations (mirror, crop...) to the image
     int offset = this->prefetch_data_.offset(item_id);
     this->transformed_data_.set_cpu_data(prefetch_data + offset);
-    this->data_transformer_->Transform(m_current_image, &(this->transformed_data_));
+
+    cv::Mat cv_img;
+    cv::resize( m_current_image, cv_img, cv::Size(new_width, new_height ));  
+    this->data_transformer_->Transform(cv_img, &(this->transformed_data_));
     //trans_time += timer.MicroSeconds();
 
     //Any thing here. For we don't use this layer in training. only use it when test or valid!
