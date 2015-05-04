@@ -171,8 +171,10 @@ do
     if [ -z $CurExprID ] || [ "$CurExprID" == "" ]
     then 
         ./$PY_DNNTrain $DATASET_NAME $pi $NEW_WIDTH -tin $TrainIterNum -rst $ResSolverStateIterNum -ttlid $TrainTestListID -cm $COMPUT_MODE -gid $GPU_DevID -doDnn 1
+	echo "Return value = $?"
     else
         ./$PY_DNNTrain $DATASET_NAME $pi $NEW_WIDTH -tin $TrainIterNum -rst $ResSolverStateIterNum -ttlid $TrainTestListID -cm $COMPUT_MODE -gid $GPU_DevID -expid $CurExprID -doDnn $DoDnnTrain
+	echo "Return value = $?"
     fi
 done
 
