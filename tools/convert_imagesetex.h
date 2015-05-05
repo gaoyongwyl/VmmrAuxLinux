@@ -38,9 +38,9 @@ using namespace std;
 #include <iomanip>
 #include <cv.h>
 #include <highgui.h>
-#include <opencv2/imgcodecs.hpp>
+//#include <opencv2/imgcodecs.hpp>
 
-//#include <opencv.hpp>
+#include <opencv.hpp>
 
 using namespace cv;
 

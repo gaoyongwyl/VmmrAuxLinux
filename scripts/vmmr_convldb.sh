@@ -14,11 +14,11 @@ export GLOG_logtostderr=1
 
 function Usage {
    echo "Usage:"
-   echo $0 "DataSetVer(eg:V1) TransformType(e.g. AAuM）PrepTypeIDs(eg. 1:3) PatchIds(eg. -1:7) NewWidth(e.g. 150) FuncCode(1 both, 0 only comput mean)"
+   echo $0 "DataSetVer(eg:V1) TransformType(e.g. AAuM) PrepTypeIDs(eg. 1:3) PatchIds(eg. -1:7) NewWidth(e.g. 150) TrainTestAug(e.g. 2:0) FuncCode(1 both, 0 only comput mean)"
    echo .
 }
 
-if [ $# -ne 6 ]
+if [ $# -ne 7 ]
 then
    echo "The paramter number not correct!"
    echo $0 receive 6 parameters.
@@ -33,12 +33,13 @@ TRANFORM_TYPE=$2
 PREP_TYPEIDS=$3
 PATCHIDS=$4
 NEW_WIDTH=$5
-DO_CONVERTLDBEX=$6
+TRAIN_TEST_AUG=$6
+DO_CONVERTLDBEX=$7
 
 if [ $DO_CONVERTLDBEX -eq 0 ]
 then
    echo.
-   echo Onley compute image mean. 
+   echo Only compute image mean. 
    echo.
 fi
 
@@ -56,7 +57,7 @@ fi
 
 #
 #convert_imagesetex parameters:
-TRAIN_TEST_AUG="0:0"
+#TRAIN_TEST_AUG="0:0" 
 FUNC_CODE=2 #0:test only, 1:train, 2 : both
 IS_NEWLDB=1 #0: append, 1: new one
 
