@@ -51,8 +51,10 @@ int main(int argc, char** argv) {
     printf("Convert a set of images to the leveldb format used\n"
 	   "as input for Caffe.\n"
 	   "Usage:\n"
-	   "    convert_imagesetex DataSetNameVer(eg. V0) PreprocTypeIDs(sep by\":\") PatchIDs(sep by \":\") NewWidth AugmentNum(<AugTrain:AugTest, 0 denote not augmenting, the resulted num is 1+$AugmetNum> FuncCode"
-	   " TestOrTrain(0:testonly,1:tainonly,2: both) IsNewLdb [<append list>]\n" );
+	   "    convert_imagesetex [1]DataSetNameVer(eg. V0) [2]PreprocTypeIDs(sep by\":\") [3]PatchIDs(sep by \":\") [4]NewWidth"
+           "                       [5]AugmentNum(<AugTrain:AugTest, 0 denote not augmenting, the resulted num is 1+$AugmetNum>) "
+           "                       [6]FuncCode( TestOrTrain(0:testonly,1:tainonly,2: both) [7]IsNewLdb <8>[<append list>]\n" 
+          );
     return 1;
   }
 
@@ -80,7 +82,7 @@ int main(int argc, char** argv) {
 
   string strAppendList = "";
   if( argc > 8 ) {
-    strAppendList = argv[9];
+    strAppendList = argv[8];
     if( FileOrFolderExist( strAppendList ) < 0 ) {
       std::cout << "The append list not exist: " << strAppendList << endl;
       return -1;
@@ -759,6 +761,10 @@ bool compareNoCase(const string &strA,const string &strB)
 // return -1 if non-exist!
 int FileOrFolderExist( string strFileOrFolder )
 {
+  if( strFileOrFolder.size() <= 0) {
+    return -1;
+  }
+
   int status = access(strFileOrFolder.c_str(), F_OK );
 
   if( status == 0 ) {

@@ -17,7 +17,7 @@
 #include <cv.h>
 //#include <opencv2/imgcodecs.hpp>
 #include <opencv2/opencv.hpp>
-#include <highgui.h>
+//#include <highgui.h>
 
 using namespace std;
 using namespace cv;

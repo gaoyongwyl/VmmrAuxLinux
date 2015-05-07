@@ -14,11 +14,12 @@ export GLOG_logtostderr=1
 
 function Usage {
    echo "Usage:"
-   echo $0 "DataSetVer(eg:V1) TransformType(e.g. AAuM) PrepTypeIDs(eg. 1:3) PatchIds(eg. -1:7) NewWidth(e.g. 150) TrainTestAug(e.g. 2:0) FuncCode(1 both, 0 only comput mean)"
+   echo $0 "DataSetVer(eg:V1) TransformType(e.g. AAuM) PrepTypeIDs(eg. 1:3) PatchIds(eg. -1:7) NewWidth(e.g. 150)"
+   echo "         TrainTestAug(e.g. 2:0) FuncCode1(1 both, 0 only comput mean) FuncCode2(0:test, 1:train, 2:both) IsNewDB(1:y, 0:no) [AppendList]"
    echo .
 }
 
-if [ $# -ne 7 ]
+if [ $# -ne 10 ]
 then
    echo "The paramter number not correct!"
    echo $0 receive 6 parameters.
@@ -35,6 +36,11 @@ PATCHIDS=$4
 NEW_WIDTH=$5
 TRAIN_TEST_AUG=$6
 DO_CONVERTLDBEX=$7
+FUNC_CODE=$8 #0:test only, 1:train, 2 : both
+IS_NEWLDB=$9 #0: append, 1: new one
+AppendList=${10}
+
+
 
 if [ $DO_CONVERTLDBEX -eq 0 ]
 then
@@ -58,8 +64,6 @@ fi
 #
 #convert_imagesetex parameters:
 #TRAIN_TEST_AUG="0:0" 
-FUNC_CODE=2 #0:test only, 1:train, 2 : both
-IS_NEWLDB=1 #0: append, 1: new one
 
 #
 # path
@@ -140,8 +144,8 @@ if [ $DO_CONVERTLDBEX -gt 0 ]
 then
   echo Now crop muliple-patches and save to ldb  ...
   echo How are : you
-
-  $CAFFE_TOOLS_PATH/$CONVERT_LDBEX $DATASET_VERSION $PREP_TYPEIDS $PATCHIDS $NEW_WIDTH $TRAIN_TEST_AUG $FUNC_CODE $IS_NEWLDB
+  echo $CAFFE_TOOLS_PATH/$CONVERT_LDBEX $DATASET_VERSION $PREP_TYPEIDS $PATCHIDS $NEW_WIDTH $TRAIN_TEST_AUG $FUNC_CODE $IS_NEWLDB $AppendList
+  $CAFFE_TOOLS_PATH/$CONVERT_LDBEX $DATASET_VERSION $PREP_TYPEIDS $PATCHIDS $NEW_WIDTH $TRAIN_TEST_AUG $FUNC_CODE $IS_NEWLDB $AppendList
 
   echo "Complete patch cropping and ldb saving. :)"
 fi
