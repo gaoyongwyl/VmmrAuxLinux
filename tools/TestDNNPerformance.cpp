@@ -417,14 +417,14 @@ int ClassificationTest( VmmrDNN* pDnnFeatureBoy, string strClassLayerName,
 		string strImgPathFilename = strSampleFolder + *lstIter;
 		cv::Mat img = imread( strImgPathFilename, CV_LOAD_IMAGE_UNCHANGED);//CV_LOAD_IMAGE_COLOR );
 		//The input source image must be original color image! so we check her.
-		if( img.channels() != 3 ) {
-			cout << "The input source image must be original color image! " << endl << endl;
-			return -1;
-		}
-
 		if( img.empty() ) {
 			cout << "*Error: load image : " <<  strImgPathFilename << endl;			
 			continue;
+		}
+
+		if( img.channels() != 3 ) {
+			cout << "The input source image must be original color image! " << endl << endl;
+			return -1;
 		}
 
 		// Get ground truth of current test vehicle face or logo area image:
