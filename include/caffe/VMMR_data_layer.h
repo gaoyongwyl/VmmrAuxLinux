@@ -23,10 +23,10 @@
 
 namespace caffe {
 template <typename Dtype>  
-class VMMRImageDataLayer : public BasePrefetchingDataLayer<Dtype>  {  
+class VMMRImageDataLayer : public VmmrBasePrefetchingDataLayer<Dtype>  {  
  public:  
     explicit VMMRImageDataLayer(const LayerParameter& param)  
-      : BasePrefetchingDataLayer<Dtype> (param) {}  
+      : VmmrBasePrefetchingDataLayer<Dtype> (param) {}  
     virtual ~VMMRImageDataLayer();  
     virtual void DataLayerSetUp(const vector<Blob<Dtype>*>& bottom,  
 			const vector<Blob<Dtype>*>& top);  

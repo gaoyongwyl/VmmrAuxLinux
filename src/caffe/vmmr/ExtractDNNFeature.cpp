@@ -576,6 +576,10 @@ int DNNFeatMulti::DNNClassLabelProb( cv::Mat& image, vector<CvPoint2D32f>& vecKe
 	//Fill license plat area
 	this->FillLicensePlate( imageStandScaleColor, vecKeyPointsScaled[KP_LicensePC], VMMR_NewWidth );
 
+#if 0
+	imshow( "color std img", imageStandScaleColor );
+	waitKey();
+#endif
 	//for gray image:
 	cv::cvtColor( image, grayImage1ch, CV_BGR2GRAY );     //conver to 1 channel gray
 	cv::cvtColor( grayImage1ch, grayImage, CV_GRAY2BGR ); //Convert three channel to feed dnn
@@ -633,13 +637,13 @@ int DNNFeatMulti::DNNClassLabelProb( cv::Mat& image, vector<CvPoint2D32f>& vecKe
 			return -3;
 		}
 	
-//#define _DEBUG_SHOW_SAVE
+		//#define _DEBUG_SHOW_SAVE
 #ifdef _DEBUG_SHOW_SAVE
-		imwrite( "d:/vmmrTest0.bmp", image );
-		imwrite( "d:/vmmrTest1.bmp", imageStandScaleColor );
-		imwrite( "d:/vmmrTest2.bmp", imageStdScaleGray );
-		imwrite( "d:/vmmrTest3.bmp", imageStdScaleEqualHist );
-		imwrite( "d:/vmmrTest4.bmp", imagePatchCropped );
+		imwrite( "/home/ygao/Projects/vmmrTest0.bmp", image );
+		imwrite( "/home/ygao/Projects/vmmrTest1.bmp", imageStandScaleColor );
+		imwrite( "/home/ygao/Projects/vmmrTest2.bmp", imageStdScaleGray );
+		imwrite( "/home/ygao/Projects/vmmrTest3.bmp", imageStdScaleEqualHist );
+		imwrite( "/home/ygao/Projects/vmmrTest4.bmp", imagePatchCropped );
 		char szTitle[2048];
 		sprintf( szTitle, "%s", PatchKPIDToStr( this->m_vecPatchIDs[n] ).c_str() );
 		imshow( szTitle, imagePatchCropped  );

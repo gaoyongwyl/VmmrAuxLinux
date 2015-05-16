@@ -81,6 +81,36 @@ class BasePrefetchingDataLayer :
   Blob<Dtype> transformed_data_;
 };
 
+//added by ygao@hz 20150516
+template <typename Dtype>
+class VmmrBasePrefetchingDataLayer :
+    public BaseDataLayer<Dtype>, public InternalThread {
+ public:
+  explicit VmmrBasePrefetchingDataLayer(const LayerParameter& param)
+      : BaseDataLayer<Dtype>(param) {}
+  virtual ~VmmrBasePrefetchingDataLayer() {}
+  // LayerSetUp: implements common data layer setup functionality, and calls
+  // DataLayerSetUp to do special data layer setup for individual layer types.
+  // This method may not be overridden.
+  void LayerSetUp(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top);
+
+  virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top);
+  virtual void Forward_gpu(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top);
+
+  virtual void CreatePrefetchThread();
+  virtual void JoinPrefetchThread();
+  // The thread's function
+  virtual void InternalThreadEntry() {}
+
+ protected:
+  Blob<Dtype> prefetch_data_;
+  Blob<Dtype> prefetch_label_;
+  Blob<Dtype> transformed_data_;
+};
+
 template <typename Dtype>
 class DataLayer : public BasePrefetchingDataLayer<Dtype> {
  public:

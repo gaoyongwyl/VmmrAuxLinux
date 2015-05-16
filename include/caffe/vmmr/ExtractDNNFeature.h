@@ -135,7 +135,7 @@ public:
 			}
 
 			boost::shared_ptr<Net<VMMRDType> > feature_extraction_net(
-					new Net<VMMRDType>( m_strDNNProtoFile ) );
+                                new Net<VMMRDType>( m_strDNNProtoFile, caffe::TEST ) );
 			m_DNNFeatureExtractionNet = feature_extraction_net;
 			m_DNNFeatureExtractionNet->CopyTrainedLayersFrom( m_strPretrainedModel );
 

@@ -85,4 +85,68 @@ STUB_GPU_FORWARD(BasePrefetchingDataLayer, Forward);
 INSTANTIATE_CLASS(BaseDataLayer);
 INSTANTIATE_CLASS(BasePrefetchingDataLayer);
 
+
+//////////////////////////////////////////////////////////
+//VmmrBasePrefetchingDataLayer
+template <typename Dtype>
+void VmmrBasePrefetchingDataLayer<Dtype>::LayerSetUp(
+    const vector<Blob<Dtype>*>& bottom, const vector<Blob<Dtype>*>& top) {
+  BaseDataLayer<Dtype>::LayerSetUp(bottom, top);
+  // Now, start the prefetch thread. Before calling prefetch, we make two
+  // cpu_data calls so that the prefetch thread does not accidentally make
+  // simultaneous cudaMalloc calls when the main thread is running. In some
+  // GPUs this seems to cause failures if we do not so.
+  this->prefetch_data_.mutable_cpu_data();
+  if (this->output_labels_) {
+    this->prefetch_label_.mutable_cpu_data();
+  }
+  //DLOG(INFO) << "Initializing prefetch";
+  //this->CreatePrefetchThread();
+  //DLOG(INFO) << "Prefetch initialized.";
+}
+
+template <typename Dtype>
+void VmmrBasePrefetchingDataLayer<Dtype>::CreatePrefetchThread() {
+  this->data_transformer_->InitRand();
+  CHECK(StartInternalThread()) << "Thread execution failed";
+}
+
+template <typename Dtype>
+void VmmrBasePrefetchingDataLayer<Dtype>::JoinPrefetchThread() {
+  CHECK(WaitForInternalThreadToExit()) << "Thread joining failed";
+}
+
+template <typename Dtype>
+void VmmrBasePrefetchingDataLayer<Dtype>::Forward_cpu(
+    const vector<Blob<Dtype>*>& bottom, const vector<Blob<Dtype>*>& top) {
+  
+  // Start a new prefetch thread
+  DLOG(INFO) << "CreatePrefetchThread";
+  CreatePrefetchThread();
+
+  // First, join the thread
+  JoinPrefetchThread();
+  DLOG(INFO) << "Thread joined";
+
+  // Reshape to loaded data.
+  top[0]->Reshape(this->prefetch_data_.num(), this->prefetch_data_.channels(),
+      this->prefetch_data_.height(), this->prefetch_data_.width());
+  // Copy the data
+  caffe_copy(prefetch_data_.count(), prefetch_data_.cpu_data(),
+             top[0]->mutable_cpu_data());
+  DLOG(INFO) << "Prefetch copied";
+  if (this->output_labels_) {
+    caffe_copy(prefetch_label_.count(), prefetch_label_.cpu_data(),
+               top[1]->mutable_cpu_data());
+  }  
+}
+
+#ifdef CPU_ONLY
+STUB_GPU_FORWARD(VmmrBasePrefetchingDataLayer, Forward);
+#endif
+
+
+INSTANTIATE_CLASS(VmmrBasePrefetchingDataLayer);
+
+
 }  // namespace caffe

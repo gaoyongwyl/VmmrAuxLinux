@@ -112,9 +112,11 @@ void VMMRImageDataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& botto
   int item_id = 0;
 
   for (int item_id = 0; item_id < batch_size; ++item_id){//读取一图片  
+
+    //#define _DEBUG_SHOW_
 #ifdef _DEBUG_SHOW_
      imshow( "Current Fetch Data", m_current_image );
-     waitKey();
+     cv::waitKey();
 #endif//_DEBUG_SHOW_
 
      //timer.Start();
