@@ -36,7 +36,9 @@ class VMMRImageDataLayer : public VmmrBasePrefetchingDataLayer<Dtype>  {
    virtual inline int ExactNumTopBlobs() const { return 2; }  
 
 public:
-   void SetCurrentImage( cv::Mat& img );		
+   void SetCurrentImage( cv::Mat& img );
+   int SetCurrentImageBatch( vector<cv::Mat>& imageBatch );
+   int GetCurrentImageNum() { return this->m_vecCurrentImageBatch.size(); };
 
 protected:  
    virtual  void InternalThreadEntry();  
@@ -51,8 +53,7 @@ protected:
   //Blob<Dtype> prefetch_data_;  
   //Blob<Dtype> prefetch_label_; 
 
-
-
+  vector<cv::Mat> m_vecCurrentImageBatch;
   cv::Mat m_current_image;
  };  
 

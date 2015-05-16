@@ -16,6 +16,17 @@ using namespace caffe;  // NOLINT(build/namespaces)
 #define API_DECLSPEC    __declspec(dllimport)
 #endif
 
+//#define TIME_PROFILE
+
+#ifdef TIME_PROFILE
+	#define _TS_          double  t = (double)getTickCount();
+	#define _TE_(action)  t = ((double)getTickCount() - t)/getTickFrequency(); \
+						  cout << endl << #action << " time :" << t << " seconds" << endl;
+#else
+	#define _TS_ 
+	#define _TE_(name) 
+#endif//
+
 #define DATA_LAYTER_NAME "data"   // data layer name should be this in proto file!!!
 #define CLASS_PROB_LAYER_NAME "prob" // class prob layer name should be this in proto file!!!
 
@@ -60,6 +71,7 @@ public:
 	//virtual int ExtractDNNFeat( cv::Mat& image, vector<CvPoint2D32f>& vecKeyPoints, string& strFeatName,  vector<VMMRDType>& vfFeature ) = 0;
 	//virtual int ExtractDNNFeatToFile( cv::Mat& image, vector<CvPoint2D32f>& vecKeyPoints, string& strFeatName,  string& strFeatFile ) = 0;
 	virtual int GetFeatureDim( string& strFeatName ) = 0;
+	virtual int GetBatchSize() = 0;
 
 	// for classification
 	virtual int GetClassLabelNum() = 0;
@@ -145,11 +157,15 @@ public:
 	};
 
 	int ExtractDNNFeat( cv::Mat& image, string& strFeatName,  vector<VMMRDType>& vfFeature );
+	int ExtractDNNFeatEx( vector<cv::Mat>& imageBatch, string& strFeatName,  vector<vector<VMMRDType> >& vfFeatureBatch );
+	
 	int ExtractDNNFeatToFile( cv::Mat& image, string& strFeatName,  string& strFeatFile );
 	int GetFeatureDim( string& strFeatName );
+	int GetBatchSize( );
 
 	int GetClassLabelNum();
 	int DNNClassLabelProb( cv::Mat& image, vector<VMMRDType>& vfClassLabelProb, bool bWeighted = false );
+	int DNNClassLabelProbEx( vector<cv::Mat>& imageBatch, vector<vector<VMMRDType> >& vfClassLabelProbBatch, bool bWeighted = false );
 	
 	string& GetDNNProtoFile() { return m_strDNNProtoFile; };
 	string& GetPretrainedModel() { return m_strPretrainedModel; };
@@ -194,8 +210,23 @@ public:
 		return totalDim;
 	};
 
+	int GetBatchSize(){
+		string strProbLayerName = CLASS_PROB_LAYER_NAME;
+		int batch_size = m_VmmrDnnFeats[0].GetBatchSize();
+		for( int n =0; n < this->m_VmmrDnnFeats.size(); n++ ) {
+			if( batch_size != m_VmmrDnnFeats[n].GetBatchSize() )
+			{
+				cout << "Batch size not equal for " << n << "-th DNN net" << endl;
+				cout << "Please check it !" << endl;
+				return -1;
+			}
+		}
+		return batch_size;
+	}
+
 	int GetClassLabelNum();
 	int DNNClassLabelProb( cv::Mat& image, vector<CvPoint2D32f>& vecKeyPoints, vector<VMMRDType>& vfClassLabelProb, bool bWeighted = false );
+	int DNNClassLabelProbEx( vector<cv::Mat>& imageBatch, vector<vector<CvPoint2D32f> >& vecKeyPoints, vector<vector<VMMRDType> >& classLabelProbBatch, bool bWeighted = false );
 
 	DNNFeature::COMPUTE_MOD GetComputeMode() { return m_enComputeMod; };
 	int GetDevID() { return m_computeDevId; };
@@ -226,7 +257,8 @@ private:
 	unsigned int m_nDnnModelIterNum;
 	vector<MakemodelMakeLabelMap> m_vecMakemodelMakeLabelMap;
 
-	bool m_bHasGrayDnn;  //preprocess type
+	bool m_bHasGrayDnn;  //preprocess type, used to remove un-necessary preprocessing.
 	bool m_bHasEqualHistDnn;
+	bool m_bHasEqualHistColorDnn;
 }; //end clas 
 #endif //_EXTRACT_DNN_FEATURE_H_

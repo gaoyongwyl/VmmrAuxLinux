@@ -62,6 +62,51 @@ int DNNFeature::ExtractDNNFeat( cv::Mat& image, string& strFeatName,  vector<VMM
 	return 0;
 }
 
+int DNNFeature::ExtractDNNFeatEx( vector<cv::Mat>& imageBatch, 
+								 string& strFeatName,  vector<vector<VMMRDType> >& vfFeatureBatch )
+{
+	if( imageBatch.size() != vfFeatureBatch.size() )
+	{
+		cout << "Number of images in a batch should be equal to the number of features" << endl;
+		return -1;
+	}
+
+	const boost::shared_ptr<Layer<VMMRDType> > data_layer = 
+		this->m_DNNFeatureExtractionNet->layer_by_name( DATA_LAYTER_NAME );	
+	VMMRImageDataLayer<VMMRDType>* pVmmrDataLayer = (VMMRImageDataLayer<VMMRDType>*)data_layer.get();
+
+	if( pVmmrDataLayer == NULL ) {
+		cout << "Invalid data layer ! Check you data layer name. It MUST be " \
+			<< DATA_LAYTER_NAME << endl << endl;		
+		return -1;
+	}
+
+	if( pVmmrDataLayer->SetCurrentImageBatch( imageBatch ) < 0 ) {
+		cout << "Set current image batch failed! " << endl << endl;
+		return -2;
+	}
+	
+	_TS_
+	m_DNNFeatureExtractionNet->Forward(m_input_vec);
+	_TE_( One Batch Forward )
+
+	const boost::shared_ptr<Blob<VMMRDType> > feature_blob = 
+		this->m_DNNFeatureExtractionNet	->blob_by_name( strFeatName );
+	int batch_size = this->GetBatchSize();
+	int dim_features = feature_blob->count() / batch_size;
+	VMMRDType* feature_blob_data;
+	for ( int n = 0; n < batch_size && n < vfFeatureBatch.size(); ++n ) {  // the image number in each batch
+		feature_blob_data = feature_blob->mutable_cpu_data() +
+			feature_blob->offset(n);
+		for ( int d = 0; d < dim_features; ++d ) {
+			//datum.add_float_data(feature_blob_data[d]);
+			vfFeatureBatch[n][d] = feature_blob_data[d];
+		}      
+	}  // for (int n = 0; n < num_features; ++n)
+
+	return 0;
+}
+
 int DNNFeature::ExtractDNNFeatToFile( cv::Mat& image, string& strFeatName,  string& strFeatFile )
 {
 	int dimFeature = this->GetFeatureDim( strFeatName );
@@ -120,6 +165,16 @@ int DNNFeature::GetFeatureDim( string& strFeatName )
 	return dim_features;
 }
 
+int DNNFeature::GetBatchSize()
+{
+	string strFeatName = CLASS_PROB_LAYER_NAME;
+	const boost::shared_ptr<Blob<VMMRDType> > feature_blob = m_DNNFeatureExtractionNet
+		->blob_by_name( strFeatName );
+	int batch_size = feature_blob->num();
+
+	return batch_size;
+}
+
 int VmmrDNN::WriteDNNFeatToFile( vector<VMMRDType>& vfFeature, string& strFeatFile )
 {
 	FILE *hFeatFile = fopen( strFeatFile.c_str(), "w" );
@@ -157,6 +212,17 @@ int DNNFeature::DNNClassLabelProb( cv::Mat& image, vector<VMMRDType>& vfClassLab
 	int nRetVal = this->ExtractDNNFeat( image, strClassLabelProbLayerName, vfClassLabelProb );
 	return nRetVal;
 }
+
+int DNNFeature::DNNClassLabelProbEx( vector<cv::Mat>& imageBatch, 
+									vector<vector<VMMRDType> >& vfClassLabelProbBatch, bool bWeighted )
+{
+	string strClassLabelProbLayerName = CLASS_PROB_LAYER_NAME;
+
+	int nRetVal = this->ExtractDNNFeatEx( imageBatch, strClassLabelProbLayerName, vfClassLabelProbBatch );
+
+	return nRetVal;
+}
+
 
 string PreprocTypeIDToCode( int pptid )
 {
@@ -436,7 +502,8 @@ int DNNFeatMulti::InitializeDNN(string strProtoModelFolder,
 	this->m_vecPreprocTypeIDs.clear();
 
 	m_bHasGrayDnn = false;  //preprocess type
-	m_bHasEqualHistDnn = false;
+	m_bHasEqualHistDnn = false;		
+	m_bHasEqualHistColorDnn = false;
 
 	//Read configuration info:
 	string strVmmrConfigInfoFile = strProtoModelFolder + "VmmrConfig.ini";
@@ -451,6 +518,20 @@ int DNNFeatMulti::InitializeDNN(string strProtoModelFolder,
 	string strIterNum = szIterNum;
 
 	for( int n = 0; n < m_vecPatchIDs.size(); n ++ ) {
+	       if( this->m_vecPreprocTypeIDs[n] == 0 ) {
+			;
+		}
+		else if( this->m_vecPreprocTypeIDs[n] == 1 ) {
+			this->m_bHasGrayDnn = true;
+		} else if( this->m_vecPreprocTypeIDs[n] == 2 ) {
+			this->m_bHasEqualHistDnn = true;
+		} else if( this->m_vecPreprocTypeIDs[n] == 3 ) {
+			this->m_bHasEqualHistColorDnn = true;
+		} else {
+			cout << "Unknown preprcess type id: " <<  this->m_vecPreprocTypeIDs[n] << endl;
+			return -3;
+		}
+	  
 		string strPatchName = PatchKPIDToStr( m_vecPatchIDs[n] );
 		string strPreprocCode = PreprocTypeIDToCode( this->m_vecPreprocTypeIDs[n] );
 		char szStdVFWidth[100];
@@ -673,6 +754,188 @@ int DNNFeatMulti::DNNClassLabelProb( cv::Mat& image, vector<CvPoint2D32f>& vecKe
 
 	return 0;
 }
+
+//Get class label prob with batch mode
+int DNNFeatMulti::DNNClassLabelProbEx( vector<cv::Mat>& imageBatch, vector<vector<CvPoint2D32f> >& vecKeyPointsBatch, \
+	vector<vector<VMMRDType> >& classLabelProbBatch, bool bWeighted )
+{
+	//Image number cannot surpass batch_size set in val net proto!
+	const int image_num = imageBatch.size();
+	const int net_batch_size = this->GetBatchSize();
+	if( image_num > net_batch_size ){
+		cout << "Image number in batch mode cannot larger thane " << net_batch_size << endl;
+		cout << "The batch size is set in val proto file. " << endl;
+		return -3;
+	}	
+
+	int numLabelNum = this->GetClassLabelNum();
+	if( classLabelProbBatch[0].size() < numLabelNum ) {
+		for( int n = 0; n < classLabelProbBatch.size(); n ++ ) {
+			classLabelProbBatch[n].resize( numLabelNum, 0 );
+		}
+	}
+
+	_TS_
+	//Notice: 
+	// 1) preprocessing is done on original big color image. So we should do this samely with same sequence. Especially for HE:
+	// 2) Input image should always be original big color image.	
+	vector<cv::Mat> imageStandScaleColorBatch(image_num), imageStdScaleGrayBatch(image_num), imageStdScaleEqualHistBatch(image_num), \
+		imageStdScaleEqualHistColorBatch(image_num);
+
+	vector<vector<CvPoint2D32f> > vecKeyPointsScaledBatch( image_num );
+	for( int n = 0; n < image_num; n ++ ) {
+		vector<CvPoint2D32f> tempKpts( vecKeyPointsBatch[0].size(), cvPoint2D32f(0,0) );
+		vecKeyPointsScaledBatch[n] = tempKpts;
+	}
+
+	//for color image
+	int nRetVal = -1;
+
+	for( int n = 0; n < image_num; n ++ ) {
+		cv::Mat image = imageBatch[n];
+		cv::Mat grayImage1ch, grayImage, equalHistImage1ch, equalHistImage, equalHistColorImage;		
+
+		copy(vecKeyPointsBatch[n].begin(), vecKeyPointsBatch[n].end(), vecKeyPointsScaledBatch[n].begin() );
+		nRetVal = GetStandarScaleImage( image, imageStandScaleColorBatch[n], vecKeyPointsScaledBatch[n], VMMR_INFLAT_COEFF, VMMR_NewWidth );
+		if( nRetVal < 0 ) { cout << "Error: GetStandarScaleImage for  imageStandScaleColor" << endl; return -1; }
+		//Fill license plat area
+		this->FillLicensePlate( imageStandScaleColorBatch[n], vecKeyPointsScaledBatch[n][KP_LicensePC], VMMR_NewWidth );
+
+		//for gray image:
+		if( this->m_bHasGrayDnn || this->m_bHasEqualHistDnn ) {
+			cv::cvtColor( image, grayImage1ch, CV_BGR2GRAY );     //conver to 1 channel gray
+			cv::cvtColor( grayImage1ch, grayImage, CV_GRAY2BGR ); //Convert three channel to feed dnn
+			copy(vecKeyPointsBatch[n].begin(), vecKeyPointsBatch[n].end(), vecKeyPointsScaledBatch[n].begin() );
+			nRetVal = GetStandarScaleImage( grayImage, imageStdScaleGrayBatch[n], vecKeyPointsScaledBatch[n], VMMR_INFLAT_COEFF, VMMR_NewWidth );
+			if( nRetVal < 0 ) { cout << "Error: GetStandarScaleImage for  imageStdScaleGray" << endl; return -1; }
+			//Fill license plat area
+			this->FillLicensePlate( imageStdScaleGrayBatch[n], vecKeyPointsScaledBatch[n][KP_LicensePC], VMMR_NewWidth );
+		}
+
+		//for equal hist image:
+		if( this->m_bHasEqualHistDnn ) {		
+			cv::equalizeHist( grayImage1ch, equalHistImage1ch );
+			cv::cvtColor( equalHistImage1ch, equalHistImage, CV_GRAY2BGR );//Convert three channel to feed dnn
+			copy(vecKeyPointsBatch[n].begin(), vecKeyPointsBatch[n].end(), vecKeyPointsScaledBatch[n].begin() );
+			nRetVal = GetStandarScaleImage( equalHistImage, imageStdScaleEqualHistBatch[n], vecKeyPointsScaledBatch[n], VMMR_INFLAT_COEFF, VMMR_NewWidth );
+			if( nRetVal < 0 ) { cout << "Error: GetStandarScaleImage for imageStdScaleEqualHist" << endl; return -1; }
+			//Fill license plat area
+			this->FillLicensePlate( imageStdScaleEqualHistBatch[n], vecKeyPointsScaledBatch[n][KP_LicensePC], VMMR_NewWidth );
+		}
+
+		//for equal hist color image
+		if( this->m_bHasEqualHistColorDnn ) {
+			vector<cv::Mat> vecImage1Ch;
+			cv::split( image, vecImage1Ch );
+			cv::equalizeHist( vecImage1Ch[0], vecImage1Ch[0] );
+			cv::equalizeHist( vecImage1Ch[1], vecImage1Ch[1] );
+			cv::equalizeHist( vecImage1Ch[2], vecImage1Ch[2] );
+			cv::merge( vecImage1Ch, equalHistColorImage );
+			copy(vecKeyPointsBatch[n].begin(), vecKeyPointsBatch[n].end(), vecKeyPointsScaledBatch[n].begin() );
+			nRetVal = GetStandarScaleImage( equalHistColorImage, imageStdScaleEqualHistColorBatch[n], vecKeyPointsScaledBatch[n], VMMR_INFLAT_COEFF, VMMR_NewWidth );
+			if( nRetVal < 0 ) { cout << "Error: GetStandarScaleImage for imageStdScaleEqualHist" << endl; return -1; }
+			//Fill license plat area
+			FillLicensePlate( imageStdScaleEqualHistColorBatch[n], vecKeyPointsScaledBatch[n][KP_LicensePC], VMMR_NewWidth );
+		}
+	}
+
+	_TE_( Preprocess one batch of images )
+
+	//note: here will only resize image in VMMR_NewWidth scale. Other resize will be done by our vmmr data layer! 
+	for( int k = 0; k < image_num; k ++ ) {
+		memset( &(classLabelProbBatch[k][0]), 0, sizeof( VMMRDType ) * numLabelNum );
+	}
+
+	//for debug
+	static int time = 0;
+	time ++;
+
+	for( int n = 0; n < this->m_VmmrDnnFeats.size(); n ++ ) {
+		vector<vector<VMMRDType> > vfTempLabelProbsBatch( image_num );//( numLabelNum );
+		vector<VMMRDType> vfModelWeights( numLabelNum, this->m_vecfModelWeights[n] );		
+
+		vector<cv::Mat> imagePatchCroppedBatch( image_num );
+
+		_TS_
+		//initi image patch and prob bath
+		for( int k = 0; k < image_num; k ++ ) {
+			vector<VMMRDType> tempProb( numLabelNum, 0 );
+			vfTempLabelProbsBatch[k] = tempProb;
+
+			int RetVal = -1;
+			if( this->m_vecPreprocTypeIDs[n] == VmmrDNN::PT_COLOR ) {
+				RetVal = CropPatchByKeyPointID( imageStandScaleColorBatch[k], imagePatchCroppedBatch[k], vecKeyPointsScaledBatch[k],this->m_vecPatchIDs[n] );
+			} else if( this->m_vecPreprocTypeIDs[n] == VmmrDNN::PT_GRAY ) {
+				RetVal = CropPatchByKeyPointID( imageStdScaleGrayBatch[k], imagePatchCroppedBatch[k], vecKeyPointsScaledBatch[k],this->m_vecPatchIDs[n] );
+			} else if( this->m_vecPreprocTypeIDs[n] ==  VmmrDNN::PT_EQUALIZEHIST ) {
+				RetVal = CropPatchByKeyPointID( imageStdScaleEqualHistBatch[k], imagePatchCroppedBatch[k], vecKeyPointsScaledBatch[k],this->m_vecPatchIDs[n] );
+			} else if( this->m_vecPreprocTypeIDs[n] == VmmrDNN::PT_EQUALIZEHISTCOLOR ) {
+				RetVal = CropPatchByKeyPointID( imageStdScaleEqualHistColorBatch[k], imagePatchCroppedBatch[k], vecKeyPointsScaledBatch[k],this->m_vecPatchIDs[n] );
+			} else {
+				cout << "Error: Unsupported preprocessing type appread !" << "  Line: " << __LINE__ << endl;
+				return -2;
+			}
+			if( RetVal < 0 ) {
+				cout << "Crop patch by key point id failed !" << endl;
+				return -3;
+			}
+		}
+		
+		_TE_( Crop one patch of a batch images )
+
+		//#define _DEBUG_SHOW_SAVE
+#ifdef _DEBUG_SHOW_SAVE		
+		if( time > 1 ){
+			imwrite( "d:/vmmrTest0.bmp", imageBatch[0] );
+			imwrite( "d:/vmmrTest1.bmp", imageStandScaleColorBatch[0] );
+			imwrite( "d:/vmmrTest2.bmp", imageStdScaleGrayBatch[0] );
+			imwrite( "d:/vmmrTest3.bmp", imageStdScaleEqualHistBatch[0] );
+			imwrite( "d:/vmmrTest4.bmp", imagePatchCroppedBatch[0] );
+			char szTitle[2048];
+			sprintf( szTitle, "%s", PatchKPIDToStr( this->m_vecPatchIDs[n] ).c_str() );
+			imshow( szTitle, imagePatchCroppedBatch[0]  );
+			waitKey();
+		}
+
+#endif //_DEBUG
+
+		int valRet = this->m_VmmrDnnFeats[n].DNNClassLabelProbEx( imagePatchCroppedBatch, vfTempLabelProbsBatch );
+		if( valRet < 0 ) {
+			cout << "The " << n << "-th DNN failed " << endl;
+			return -4;
+		}
+
+		for( int k = 0; k < image_num; k ++ ) {
+			if( m_vecPatchIDs[n] == VmmrDNN::MAKE_LogoArea ) {  // current is make dnn classifier 		
+				for( int m = 0; m < classLabelProbBatch[k].size(); m ++ ) {
+					int _makeLabel = this->m_vecMakemodelMakeLabelMap[m].nMakeLabel;
+					float fWScore = vfTempLabelProbsBatch[k][_makeLabel] * this->m_vecfModelWeights[n];
+					classLabelProbBatch[k][m] += fWScore;
+				}
+
+			} else {  // makemodel dnn classifier
+				//multiply weights:
+				transform( vfModelWeights.begin(), vfModelWeights.end(), \
+					vfTempLabelProbsBatch[k].begin(), vfTempLabelProbsBatch[k].begin(), multiplies<VMMRDType>());
+
+				//Add to vfClassLabelProb;
+				transform( vfTempLabelProbsBatch[k].begin(), vfTempLabelProbsBatch[k].end(),\
+					classLabelProbBatch[k].begin(),classLabelProbBatch[k].begin(), plus<VMMRDType>());
+			}			
+		}
+
+	}
+
+	for( int k = 0; k < image_num; k ++ ) {
+		vector<VMMRDType> vfTempLabelProbs( numLabelNum, 1.0f/this->m_VmmrDnnFeats.size() );
+		transform( classLabelProbBatch[k].begin(),  classLabelProbBatch[k].end(), \
+			vfTempLabelProbs.begin(),  classLabelProbBatch[k].begin(), multiplies<VMMRDType>());
+	}
+
+	return 0;
+}
+
+
 
 //invoke this after resize and before crop
 int DNNFeatMulti::FillLicensePlate( cv::Mat& image, CvPoint2D32f& ptLicensePlateCenter, int iNewWidth )

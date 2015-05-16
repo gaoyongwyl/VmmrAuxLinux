@@ -23,13 +23,32 @@ VMMRImageDataLayer<Dtype>::~VMMRImageDataLayer<Dtype>()
   this->JoinPrefetchThread();
 }  
 
-template <typename Dtype> 
-void VMMRImageDataLayer<Dtype>::SetCurrentImage( cv::Mat& img )
-{
-   this->m_current_image.release();
-   this->m_current_image = img.clone();
-}
+  template <typename Dtype> 
+  void VMMRImageDataLayer<Dtype>::SetCurrentImage( cv::Mat& img )
+  {
+    //this->m_current_image.release();
+    //this->m_current_image = img.clone();
+    vector<cv::Mat> imageBatch(1);
+    imageBatch[0] = img;
+    this->SetCurrentImageBatch( imageBatch );
 
+  }
+
+  template <typename Dtype> 
+  int VMMRImageDataLayer<Dtype>::SetCurrentImageBatch( vector<cv::Mat>& imageBatch )
+  {
+    const int batch_size = this->layer_param_.image_data_param().batch_size();  
+    if( imageBatch.size() > batch_size ) {
+      LOG(INFO) << "Error: the number of images of current set is larger than internal batch size! ";
+      return -1;
+    }
+
+    this->m_vecCurrentImageBatch = imageBatch;
+
+    return 0;
+  }
+
+  
 template <typename Dtype>  
 void VMMRImageDataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bottom,  
 		const vector<Blob<Dtype>*>& top) {  
@@ -48,7 +67,7 @@ void VMMRImageDataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& botto
 
     // image  
    const int crop_size = this->layer_param_.image_data_param().crop_size();   
-   const int batch_size = 1;//this->layer_param_.image_data_param().batch_size();  
+   const int batch_size = this->layer_param_.image_data_param().batch_size();  
    const string& mean_file = this->layer_param_.image_data_param().mean_file();  
    if (crop_size > 0) {  
      (top)[0]->Reshape(batch_size, channels, crop_size, crop_size);  
@@ -90,7 +109,7 @@ void VMMRImageDataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& botto
   CHECK(this->prefetch_data_.count());  
   CHECK(this->transformed_data_.count());
   ImageDataParameter image_data_param = this->layer_param_.image_data_param();  
-  const int batch_size = 1;//image_data_param.batch_size(); 这里我们只需要一张图片  
+  const int batch_size = image_data_param.batch_size(); 
   const int new_height = image_data_param.new_height();  
   const int new_width = image_data_param.new_width();  
   const int crop_size = image_data_param.crop_size();  
@@ -111,7 +130,7 @@ void VMMRImageDataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& botto
 		
   int item_id = 0;
 
-  for (int item_id = 0; item_id < batch_size; ++item_id){//读取一图片  
+  for (int item_id = 0; item_id < batch_size && item_id < m_vecCurrentImageBatch.size() ; ++item_id){//读取一图片  
 
     //#define _DEBUG_SHOW_
 #ifdef _DEBUG_SHOW_
@@ -125,7 +144,7 @@ void VMMRImageDataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& botto
     this->transformed_data_.set_cpu_data(prefetch_data + offset);
 
     cv::Mat cv_img;
-    cv::resize( m_current_image, cv_img, cv::Size(new_width, new_height ));  
+    cv::resize( m_vecCurrentImageBatch[item_id], cv_img, cv::Size(new_width, new_height ));  
     this->data_transformer_->Transform(cv_img, &(this->transformed_data_));
     //trans_time += timer.MicroSeconds();
 

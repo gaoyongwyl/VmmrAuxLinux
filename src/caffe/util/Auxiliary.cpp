@@ -874,14 +874,23 @@ int LoadKeypointsFromFileLab( string strAnnotFile,
   }
   int nKeyPoints = -1;
   bool bStart = false, bEnd = false;
+  int count = 0;
+
   while( ! ifAnnotFile.eof() ) {
     string strLine;
     getline( ifAnnotFile, strLine );
     
     if( strLine.find( "n_points" ) != string::npos ) {
-      string strNum = strLine.substr( strLine.find_last_of( ":" ) );
+      string strNum = strLine.substr( strLine.find_last_of( ":" ) + 1 );
       TrimSpace( strNum );
       nKeyPoints = atoi( strNum.c_str() );
+      if( nKeyPoints < 0 ) {
+	cout << "Key points number parse error in file: " << strAnnotFile << endl;
+	return -1;
+      }
+      if( vecKeyPoints.size() < nKeyPoints ) {
+	vecKeyPoints.resize( nKeyPoints );
+      }
     }
     if( bStart ) {
       TrimSpace( strLine );
@@ -894,7 +903,8 @@ int LoadKeypointsFromFileLab( string strAnnotFile,
 	  TrimSpace( strX );
 	  TrimSpace( strY );
 	  CvPoint2D32f ptKeyPoint = cvPoint2D32f( atof( strX.c_str()), atof( strY.c_str() ) );
-	  vecKeyPoints.push_back( ptKeyPoint );
+	  vecKeyPoints[count] = ptKeyPoint;
+          count ++;	  
 	}
       }
     }
